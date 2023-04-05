@@ -1,1 +1,2 @@
 # gpgpu
+# study nyuzi
