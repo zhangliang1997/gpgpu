@@ -1,14 +1,11 @@
 import defines::*;
 
 module fetch(
-	input in,
-	output logic out
 
 );	
 
 
 scalar_t  pcRegs[NUM_WRAPS_PER_CORE];
-
 
 genvar wrapId;
 generate
@@ -24,6 +21,10 @@ generate
 	end
 
 endgenerate 
+
+
+
+logic[NUM_WRAPS_PER_CORE - 1:0]  activeMask4WrapsPerSMReg;
 
 
 
