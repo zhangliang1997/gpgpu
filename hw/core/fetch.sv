@@ -2,10 +2,17 @@ import defines::*;
 
 module fetch(
 
+	logic clk,
+	logic reset,
+
+   		 
+
 );	
 
 
+
 scalar_t  pcRegs[NUM_WRAPS_PER_CORE];
+logic[NUM_WRAPS_PER_CORE - 1:0] selectedWrapOH;
 
 genvar wrapId;
 generate
@@ -15,7 +22,7 @@ generate
 		begin
 			if (reset)
 				pcRegs[wrapIdx] <= RESET_PC;
-			else if (slectedWrapOH[wrapIdx])
+			else if (selectedWrapOH[wrapIdx])
 				pcRegs[wrapIdx] <= pcRegs[wrapIdx] + 4;
 		end
 	end
@@ -25,6 +32,9 @@ endgenerate
 
 
 logic[NUM_WRAPS_PER_CORE - 1:0]  activeMask4WrapsPerSMReg;
+
+rr_arbiter arbiter(clk, reset, activeMask4WrapsPerSMReg, selectedWrapOH);
+
 
 
 
