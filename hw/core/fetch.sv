@@ -3,20 +3,18 @@ import defines::*;
 module fetch(
 
 	logic clk,
-	logic reset,
-
-   		 
+	logic reset
 
 );	
 
 
 
-scalar_t  pcRegs[NUM_WRAPS_PER_CORE];
-logic[NUM_WRAPS_PER_CORE - 1:0] selectedWrapOH;
+scalar_t  pcRegs[NUM_WARPS_PER_SM];
+logic[NUM_WARPS_PER_SM - 1:0] selectedWrapOH;
 
-genvar wrapId;
+genvar wrapIdx;
 generate
-    for(wrapIdx = 0; wrapIdx <= NUM_WRAPS_PER_CORE; wrapIdx++)
+    for(wrapIdx = 0; wrapIdx <= NUM_WARPS_PER_SM; wrapIdx++)
 	begin
 		always_ff @(posedge clk, posedge reset)
 		begin
@@ -29,9 +27,7 @@ generate
 
 endgenerate 
 
-
-
-logic[NUM_WRAPS_PER_CORE - 1:0]  activeMask4WrapsPerSMReg;
+logic[NUM_WARPS_PER_SM - 1:0]  activeMask4WrapsPerSMReg;
 
 rr_arbiter arbiter(clk, reset, activeMask4WrapsPerSMReg, selectedWrapOH);
 
