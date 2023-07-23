@@ -3,3 +3,4 @@ obj_dir/
 *.log
 *.jou
 gpgpu_vivado/
+.Xil/
