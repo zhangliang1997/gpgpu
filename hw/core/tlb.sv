@@ -31,36 +31,40 @@ module tlb
 
 
 
-	logic NUM_SETS = NUM_ENTRIES / NUM_WAYS;
+	localparam NUM_SETS = NUM_ENTRIES / NUM_WAYS;
 	logic tlb_read_en;
-	logic SET_WIDTH = $clog2(NUM_SETS);
-	logic tlb_read_addr = request_vpage_idx[SET_WIDTH - 1 : 0];
-	logic page_index_t vpage_idx_all_ways[NUM_WAYS];
-	logic page_index_t ppage_idx_all_ways[NUM_WAYS];
+	localparam SET_WIDTH = $clog2(NUM_SETS);
+	
+	page_index_t vpage_idx_all_ways[NUM_WAYS];
+	page_index_t ppage_idx_all_ways[NUM_WAYS];
 	logic [ASID_WIDTH - 1 : 0]  asid_all_ways[NUM_WAYS];
 	logic global_all_ways[NUM_WAYS];
 	logic supervisor_all_ways[NUM_WAYS];
 	logic exe_writable_all_ways[NUM_WAYS];
 	logic present_all_way[NUM_WAYS];
-	logic way_hit_oh[NUM_WAYS];
-    logic page_index_t  update_ppage_idx_latched;
-    logic page_index_t  update_vpage_idx_latched;
+	logic [NUM_WAYS - 1 : 0] way_hit_oh;
+    page_index_t  update_ppage_idx_latched;
+    page_index_t  update_vpage_idx_latched;
     logic update_present_latched;
     logic update_exe_writable_latched;
     logic update_supervisor_latched;
     logic update_global_latched;
     logic [ASID_WIDTH - 1 : 0 ] update_asid_latched;
-	logic tlb_write_addr = update_vpage_idx_latched[SET_WIDTH - 1 : 0];
+	
 
-	logic page_index_t 			read_vpage_idx_all_ways[NUM_WAYS];
-	logic page_index_t 			read_ppage_idx_all_ways[NUM_WAYS];
-	logic 						read_supervisor[NUM_WAYS];
-	logic 						read_exe_writable[NUM_WAYS];
-	logic 						read_present[NUM_WAYS];
+	page_index_t 			read_vpage_idx_all_ways[NUM_WAYS];
+	page_index_t 			read_ppage_idx_all_ways[NUM_WAYS];
+	logic 						read_supervisor_all_ways[NUM_WAYS];
+	logic 						read_exe_writable_all_ways[NUM_WAYS];
+	logic 						read_present_all_ways[NUM_WAYS];
 	logic invalidate_en_latched;
-
+    logic [SET_WIDTH - 1 : 0] tlb_read_addr;
+    logic [SET_WIDTH - 1 : 0] tlb_write_addr;
+    logic [NUM_WAYS - 1 : 0] way_update_oh;
+    logic update_en_latched;
+    assign tlb_write_addr = update_vpage_idx_latched[SET_WIDTH - 1 : 0];
 	assign tlb_read_en = lookup_en || update_en || invalidate_en;
-
+    assign tlb_read_addr = request_vpage_idx[SET_WIDTH - 1 : 0];
 
 	genvar way_idx;
 	generate
@@ -69,6 +73,7 @@ module tlb
 		logic entry_valid[NUM_SETS];
 		logic [ASID_WIDTH - 1 : 0] asid;
 		logic way_valid;
+		logic way_global;
 		sram1w1r #(
 			.SETS_NUM(NUM_SETS),
 			.DATA_WIDTH(PAGE_INDEX_BITS * 2 + ASID_WIDTH + 4)
@@ -79,11 +84,11 @@ module tlb
 			.read_data({read_vpage_idx_all_ways[way_idx],
 						read_ppage_idx_all_ways[way_idx],
 						asid,
-						global,
-						read_supervisor[way_idx],
-						read_exe_writable[way_idx],
-						read_present[way_idx]}),
-			.write_en(update_en_latched && way_updated_oh[way_idx]),
+						way_global,
+						read_supervisor_all_ways[way_idx],
+						read_exe_writable_all_ways[way_idx],
+						read_present_all_ways[way_idx]}),
+			.write_en(update_en_latched && way_update_oh[way_idx]),
 			.write_addr(tlb_write_addr),
 			.write_data({update_vpage_idx_latched,
 						 update_ppage_idx_latched,
@@ -98,41 +103,53 @@ module tlb
 		always_ff @(posedge clk, posedge reset)
 		begin
 			if (reset) 
-			begin
-				for (unsigned i = 0; i < NUM_SETS; i++)
-					entry_valid[i] <= 0;        
-				else if (invalidate_en_latched && way_update_oh[way_idx] )
+				for (int i = 0; i < NUM_SETS; i++)
+					entry_valid[i] <= 0;        		
+			else if (invalidate_en_latched && way_update_oh[way_idx] )
                 	entry_valid[tlb_write_addr] <= 0;
-				else if (update_en_latched && way_update_oh[way_idx])
+			else if (update_en_latched && way_update_oh[way_idx])
 					entry_valid[tlb_write_addr] <= 1;
-			end 
 
 		end
 		always_comb @(*)
 		begin
-			if (invalidate_en_latched && way_updated_oh[way_idx] && tlb_write_addr == tlb_read_addr)
+			if (invalidate_en_latched && way_update_oh[way_idx] && tlb_write_addr == tlb_read_addr)
 				way_valid = 0;
 			else
 				way_valid = entry_valid[tlb_read_addr];
 		end
 		assign way_hit_oh[way_idx] = (vpage_idx_all_ways[way_idx] == request_vpage_idx) 
-									 && way_valid && ((asid == request_asid) || global);
+									 && way_valid && ((asid == request_asid) || way_global);
 
 	end
 	endgenerate
 
 	assign lookup_hit = |way_hit_oh;
 
-	always @(posedge clk, posedge reset)
+	always_ff @(posedge clk, posedge reset)
 	begin
-		update_vpage_idx_latched       <= request_vpage_idx;
-		update_ppage_idx_latched       <= update_ppage_idx;
-		update_present_latched         <= update_present;
-		update_exe_writable_latched    <= update_exe_writable;
-		update_supervisor_latched      <= update_supervisor;
-		update_global_latched          <= update_global;
-		update_asid_latched			   <= request_asid;
-		invalidate_en_latched 	 	   <= invalidate_en;
+		if (reset)
+		begin
+			update_vpage_idx_latched       <= 0;
+			update_ppage_idx_latched       <= 0;
+			update_present_latched         <= 0;
+			update_exe_writable_latched    <= 0;
+			update_supervisor_latched      <= 0;
+			update_global_latched          <= 0;
+			update_asid_latched			   <= 0;
+			invalidate_en_latched 	 	   <= 0;
+		end
+		else 
+		begin
+			update_vpage_idx_latched       <= request_vpage_idx;
+			update_ppage_idx_latched       <= update_ppage_idx;
+			update_present_latched         <= update_present;
+			update_exe_writable_latched    <= update_exe_writable;
+			update_supervisor_latched      <= update_supervisor;
+			update_global_latched          <= update_global;
+			update_asid_latched			   <= request_asid;
+			invalidate_en_latched 	 	   <= invalidate_en;
+		end
 	end
 	
 	always_comb @(*)
@@ -180,8 +197,8 @@ module tlb
 	begin
 		if (reset)
 			way_update_oh <= NUM_WAYS'(1);
-		else if (update_en_latched)
-			way_udpate_oh <= {way_update_oh[NUM_WAYS - 2 : 0], way_update_oh[NUM_WAYS - 1]};
+		else if(update_en_latched)
+			way_update_oh <= {way_update_oh[NUM_WAYS - 2 : 0], way_update_oh[NUM_WAYS - 1]};
 	end
 
 endmodule

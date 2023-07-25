@@ -14,8 +14,6 @@ parameter CACHE_LINE_BYTES              = NUM_VECTOR_LINES * 4;
 parameter CACHE_LINE_BYTE_OFFSET_WIDTH  = $log2(CACHE_LINE_BYTES);
 
 
-parameter 
-
 parameter NUM_L1I_SETS                   = 32;
 parameter NUM_L1I_WAYS                   = 4;
 parameter L1I_SETS_WIDTH                 = $log2(NUM_L1I_SETS);
@@ -28,12 +26,12 @@ parameter NUM_L1I_TLB_SETS				 = 16;
 parameter ASID_WIDTH 					 = 8;
 
 parameter PAGE_SIZE 					 = 4096;
-parameter PAGE_INDEX_BITS 			 	 = 32 - $clog2(PAGE_SIZE)
-typedef  logic[PAGE_INDEX_BITS - 1 : 0]  = page_index_t;
+parameter PAGE_INDEX_BITS 			 	 = 32 - $clog2(PAGE_SIZE);
+typedef  logic[PAGE_INDEX_BITS - 1 : 0]   page_index_t;
 
 
-typedef [L1I_TAG_WIDTH - 1 : 0] l1i_tag_t;
-typedef [L1I_SETS_WIDTH - 1 : 0] l1i_set_t;
+typedef logic [L1I_TAG_WIDTH - 1 : 0] l1i_tag_t;
+typedef logic [L1I_SETS_WIDTH - 1 : 0] l1i_set_t;
 
 typedef struct packed {
 	l1i_tag_t tag;

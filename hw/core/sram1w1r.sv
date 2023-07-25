@@ -1,7 +1,7 @@
 module sram1w1r
-(
-	parameter SETS_NUM = 4,	
-	parameter DATA_WIDTH = 32
+#(
+	parameter SETS_NUM = -1,	
+	parameter DATA_WIDTH = -1
 
 )
 (
@@ -9,11 +9,11 @@ module sram1w1r
 
 	input read_en,
 	input read_addr,
-	output logic read_data,
+	output logic[DATA_WIDTH -1 : 0]  read_data,
 
 	input write_en,
 	input write_addr,
-	input write_data
+	input [DATA_WIDTH -1 : 0] write_data
 );
 
 
