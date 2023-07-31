@@ -17,13 +17,17 @@ parameter CACHE_LINE_BYTES              = NUM_VECTOR_LINES * 4;
 parameter CACHE_LINE_BYTE_OFFSET_WIDTH  = $log2(CACHE_LINE_BYTES);
 
 
-parameter NUM_L1I_SETS                   = 32;
-parameter NUM_L1I_WAYS                   = 4;
-parameter L1I_SETS_WIDTH                 = $log2(NUM_L1I_SETS);
+parameter L1I_ENTRIES					 = 64;
+parameter L1I_WAYS_NUM                   = 4;
+parameter L1I_SETS_NUM                   = L1I_ENTRIES / L1I_WAYS_NUM;
+parameter L1I_SETS_WIDTH                 = $clog2(L1I_SETS_NUM)
 parameter L1I_TAG_WIDTH                  = 32 - (L1I_SETS_WIDTH + CACHE_LINE_BYTE_OFFSET_WIDTH);
 
+typedef logic[L1I_SET_WIDTH - 1 : 0]	 l1i_set_addr_t;
+typedef logic[L1I_WAYS_NUM - 1 : 0]		 l1i_way_mask_t;
+
 parameter NUM_L1I_TLB_WAYS				 = 4;
-parameter NUM_L1I_TLB_SETS				 = 16;
+parameter NUM_L1I_TLB_ENTRIES			 = 16;
 
 
 parameter ASID_WIDTH 					 = 8;
